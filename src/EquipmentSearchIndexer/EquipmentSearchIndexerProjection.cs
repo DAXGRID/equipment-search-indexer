@@ -4,6 +4,8 @@ using Microsoft.Extensions.Options;
 using OpenFTTH.EventSourcing;
 using OpenFTTH.UtilityGraphService.Business.TerminalEquipments.Events;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace EquipmentSearchIndexer;
 
@@ -11,6 +13,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 {
     private readonly ILogger<EquipmentSearchIndexerProjection> _logger;
     private readonly Settings _settings;
+    private readonly Dictionary<Guid, string> _specifications = new();
 
     public EquipmentSearchIndexerProjection(
         ILogger<EquipmentSearchIndexerProjection> logger,
@@ -18,13 +21,13 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
     {
         _logger = logger;
         _settings = settings.Value;
-        ProjectEvent<TerminalEquipmentPlacedInNodeContainer>(Project);
-        ProjectEvent<TerminalEquipmentNamingInfoChanged>(Project);
-        ProjectEvent<TerminalEquipmentSpecificationAdded>(Project);
-        ProjectEvent<TerminalEquipmentSpecificationChanged>(Project);
+        ProjectEventAsync<TerminalEquipmentPlacedInNodeContainer>(Project);
+        ProjectEventAsync<TerminalEquipmentNamingInfoChanged>(Project);
+        ProjectEventAsync<TerminalEquipmentSpecificationAdded>(Project);
+        ProjectEventAsync<TerminalEquipmentSpecificationChanged>(Project);
     }
 
-    private void Project(IEventEnvelope eventEnvelope)
+    private async Task Project(IEventEnvelope eventEnvelope)
     {
         switch (eventEnvelope.Data)
         {
@@ -45,23 +48,20 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
     }
 
-    private void Handle(TerminalEquipmentPlacedInNodeContainer @event)
+    private async Task Handle(TerminalEquipmentPlacedInNodeContainer @event)
     {
-        // Handle
     }
 
-    private void Handle(TerminalEquipmentNamingInfoChanged @event)
+    private async Task Handle(TerminalEquipmentNamingInfoChanged @event)
     {
-
     }
 
-    private void Handle(TerminalEquipmentSpecificationAdded @event)
+    private async Task Handle(TerminalEquipmentSpecificationAdded @event)
     {
-
+        _specifications.TryAdd(@event.Specification.Id, @event.Specification.Name);
     }
 
-    private void Handle(TerminalEquipmentSpecificationChanged @event)
+    private async Task Handle(TerminalEquipmentSpecificationChanged @event)
     {
-
     }
 }
