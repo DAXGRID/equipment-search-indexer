@@ -5,6 +5,9 @@ using OpenFTTH.EventSourcing;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using System;
+using System.Collections.Generic;
+using Typesense.Setup;
 
 namespace EquipmentSearchIndexer.Config;
 
@@ -13,19 +16,9 @@ public static class HostConfig
     public static IHost Configure()
     {
         var hostBuilder = new HostBuilder();
-        ConfigureApp(hostBuilder);
         ConfigureLogging(hostBuilder);
         ConfigureServices(hostBuilder);
         return hostBuilder.Build();
-    }
-
-    private static void ConfigureApp(IHostBuilder hostBuilder)
-    {
-        hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
-        {
-            config.SetBasePath(System.AppContext.BaseDirectory);
-            config.AddJsonFile("appsettings.json", false, true);
-        });
     }
 
     private static void ConfigureServices(IHostBuilder hostBuilder)
@@ -36,6 +29,19 @@ public static class HostConfig
             services.AddHostedService<EquipmentSearchIndexerHost>();
             services.Configure<Settings>(s => hostContext.Configuration.GetSection("Settings").Bind(s));
             services.AddSingleton<IProjection, EquipmentSearchIndexerProjection>();
+            services.AddTypesenseClient(c =>
+            {
+                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE__APIKEY");
+                c.Nodes = new List<Node>
+                {
+                    new Node
+                    {
+                        Host = Environment.GetEnvironmentVariable("TYPESENSE__HOST"),
+                        Port = Environment.GetEnvironmentVariable("TYPESENSE__PORT"),
+                        Protocol = Environment.GetEnvironmentVariable("TYPESENSE__PROTOCOL"),
+                    }
+                };
+            });
         });
     }
 
