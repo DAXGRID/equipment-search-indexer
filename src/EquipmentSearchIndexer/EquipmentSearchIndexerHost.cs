@@ -1,44 +1,61 @@
-using EquipmentSearchIndexer.Config;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenFTTH.EventSourcing;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Typesense;
 
 namespace EquipmentSearchIndexer;
 
 internal class EquipmentSearchIndexerHost : BackgroundService
 {
     private readonly ILogger<EquipmentSearchIndexerHost> _logger;
-    private readonly Settings _settings;
     private readonly IEventStore _eventStore;
+    private readonly ITypesenseClient _typesenseClient;
 
     public EquipmentSearchIndexerHost(
         IEventStore eventStore,
         ILogger<EquipmentSearchIndexerHost> logger,
-        Settings settings)
+        ITypesenseClient typesenseClient)
     {
         _eventStore = eventStore;
         _logger = logger;
-        _settings = settings;
+        _typesenseClient = typesenseClient;
     }
 
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"Starting {nameof(EquipmentSearchIndexerHost)}");
-
+        var collectionName = $"equipment-{Guid.NewGuid()}";
+        var aliasName = "equipments";
         try
         {
-            _logger.LogInformation("Start reading all events...");
-            _eventStore.DehydrateProjections();
+            _logger.LogInformation($"Creating Typesense collection '{collectionName}'.");
+            await CreateEquipmentCollection(collectionName);
+
+            _logger.LogInformation("Start reading all events.");
+            await _eventStore.DehydrateProjectionsAsync().ConfigureAwait(false);
             _logger.LogInformation("Initial event processing finish.");
-            _logger.LogInformation("Start listning for new events...");
+
+            _logger.LogInformation($"Switching alias '{aliasName}' to '{collectionName}'");
+            await _typesenseClient.UpsertCollectionAlias(aliasName, new CollectionAlias(collectionName))
+                .ConfigureAwait(false);
+
+            _logger.LogInformation("Start listning for new events.");
             await ListenEvents(stoppingToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex.Message, ex);
+            throw;
+        }
+        finally
+        {
+            _logger.LogInformation($"Shutting down.");
+            _logger.LogInformation($"Deleting collection '{collectionName}'.");
+            await _typesenseClient.DeleteCollection(collectionName).ConfigureAwait(false);
         }
     }
 
@@ -48,10 +65,25 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         {
             await Task.Delay(1000, stoppingToken).ConfigureAwait(false);
 
-            var eventsProcessed = _eventStore.CatchUp();
+            var eventsProcessed = await _eventStore.CatchUpAsync().ConfigureAwait(false);
 
             if (eventsProcessed > 0)
                 _logger.LogInformation($"Processed {eventsProcessed} new events.");
         }
+    }
+
+    private async Task CreateEquipmentCollection(string collectionName)
+    {
+        var schema = new Schema
+        {
+            Name = collectionName,
+            Fields = new List<Field>
+            {
+                new Field("id", FieldType.String, false, false, true),
+                new Field("name", FieldType.String, false, false, true),
+            },
+        };
+
+        await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenFTTH.EventSourcing;
+using OpenFTTH.EventSourcing.Postgres;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -16,9 +17,18 @@ public static class HostConfig
     public static IHost Configure()
     {
         var hostBuilder = new HostBuilder();
+        ConfigureApp(hostBuilder);
         ConfigureLogging(hostBuilder);
         ConfigureServices(hostBuilder);
         return hostBuilder.Build();
+    }
+
+    private static void ConfigureApp(IHostBuilder hostBuilder)
+    {
+        hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
+        {
+            config.AddEnvironmentVariables();
+        });
     }
 
     private static void ConfigureServices(IHostBuilder hostBuilder)
@@ -28,7 +38,6 @@ public static class HostConfig
             services.AddOptions();
             services.AddHostedService<EquipmentSearchIndexerHost>();
             services.Configure<Settings>(s => hostContext.Configuration.GetSection("Settings").Bind(s));
-            services.AddSingleton<IProjection, EquipmentSearchIndexerProjection>();
             services.AddTypesenseClient(c =>
             {
                 c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE__APIKEY");
@@ -42,6 +51,14 @@ public static class HostConfig
                     }
                 };
             });
+            services.AddSingleton<IProjection, EquipmentSearchIndexerProjection>();
+            services.AddSingleton<IEventStore>(
+                e =>
+                new PostgresEventStore(
+                    serviceProvider: e.GetRequiredService<IServiceProvider>(),
+                    connectionString: Environment.GetEnvironmentVariable("CONNECTIONSTRING"),
+                    databaseSchemaName: "events"
+                ) as IEventStore);
         });
     }
 
