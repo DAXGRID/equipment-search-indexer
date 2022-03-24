@@ -1,5 +1,7 @@
+using EquipmentSearchIndexer.Config;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenFTTH.EventSourcing;
 using System;
 using System.Collections.Generic;
@@ -14,21 +16,24 @@ internal class EquipmentSearchIndexerHost : BackgroundService
     private readonly ILogger<EquipmentSearchIndexerHost> _logger;
     private readonly IEventStore _eventStore;
     private readonly ITypesenseClient _typesenseClient;
+    private readonly Settings _settings;
 
     public EquipmentSearchIndexerHost(
         IEventStore eventStore,
         ILogger<EquipmentSearchIndexerHost> logger,
-        ITypesenseClient typesenseClient)
+        ITypesenseClient typesenseClient,
+        IOptions<Settings> settings)
     {
         _eventStore = eventStore;
         _logger = logger;
         _typesenseClient = typesenseClient;
+        _settings = settings.Value;
     }
 
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"Starting {nameof(EquipmentSearchIndexerHost)}");
-        var collectionName = $"equipment-{Guid.NewGuid()}";
+        var collectionName = _settings.UniqueCollectionName;
         var aliasName = "equipments";
         try
         {
@@ -37,7 +42,7 @@ internal class EquipmentSearchIndexerHost : BackgroundService
 
             _logger.LogInformation("Start reading all events.");
             await _eventStore.DehydrateProjectionsAsync().ConfigureAwait(false);
-            _logger.LogInformation("Initial event processing finish.");
+            _logger.LogInformation("Initial event processing finished.");
 
             _logger.LogInformation($"Switching alias '{aliasName}' to '{collectionName}'");
             await _typesenseClient.UpsertCollectionAlias(aliasName, new CollectionAlias(collectionName))

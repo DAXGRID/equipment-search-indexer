@@ -1,6 +1,8 @@
+using System;
+
 namespace EquipmentSearchIndexer.Config;
 
 internal record Settings
 {
-    public string? ConnectionString { get; init; }
+    public string UniqueCollectionName = $"equipments-{Guid.NewGuid()}";
 }
