@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using OpenFTTH.EventSourcing;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Typesense;
@@ -33,6 +34,9 @@ internal class EquipmentSearchIndexerHost : BackgroundService
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"Starting {nameof(EquipmentSearchIndexerHost)}");
+        var processableNames = String.Join(", ", _settings.SpecificationNames);
+        _logger.LogInformation($"Processing following specification names: '{processableNames}'");
+
         var collectionName = _settings.UniqueCollectionName;
         var aliasName = "equipments";
         try

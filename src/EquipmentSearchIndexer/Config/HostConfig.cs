@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using OpenFTTH.EventSourcing;
 using OpenFTTH.EventSourcing.Postgres;
 using Serilog;
@@ -8,6 +9,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Typesense.Setup;
 
 namespace EquipmentSearchIndexer.Config;
@@ -36,18 +38,23 @@ public static class HostConfig
         hostBuilder.ConfigureServices((hostContext, services) =>
         {
             services.AddOptions();
+            services.PostConfigure<Settings>(settings =>
+            {
+                settings.SpecificationNames = JsonConvert.DeserializeObject<List<string>>(
+                    Environment.GetEnvironmentVariable("SPECIFICATION_NAMES") ?? "[]") ?? new();
+                settings.UniqueCollectionName = $"equipments-{Guid.NewGuid()}";
+            });
             services.AddHostedService<EquipmentSearchIndexerHost>();
-            services.Configure<Settings>(s => hostContext.Configuration.GetSection("Settings").Bind(s));
             services.AddTypesenseClient(c =>
             {
-                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE__APIKEY");
+                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE_APIKEY");
                 c.Nodes = new List<Node>
                 {
                     new Node
                     {
-                        Host = Environment.GetEnvironmentVariable("TYPESENSE__HOST"),
-                        Port = Environment.GetEnvironmentVariable("TYPESENSE__PORT"),
-                        Protocol = Environment.GetEnvironmentVariable("TYPESENSE__PROTOCOL"),
+                        Host = Environment.GetEnvironmentVariable("TYPESENSE_HOST"),
+                        Port = Environment.GetEnvironmentVariable("TYPESENSE_PORT"),
+                        Protocol = Environment.GetEnvironmentVariable("TYPESENSE_PROTOCOL"),
                     }
                 };
             });

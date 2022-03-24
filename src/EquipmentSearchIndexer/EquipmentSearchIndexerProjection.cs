@@ -40,21 +40,38 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
     public override async Task DehydrationFinishAsync()
     {
         _logger.LogInformation("Starting bulk insert.");
+
+        // We do this because we want to avoid invalid configurations.
+        // Because they can cause unexpected behaviours.
+        if (_settings.SpecificationNames.Count != _specifications.Count)
+        {
+            throw new ArgumentException("Could not find all specifications that is registered for insert.");
+        }
+
         var batchSize = 100;
         var batch = new List<TypesenseEquipment>();
         foreach (var bulkEquipment in _bulkEquipments)
         {
+            // We only want to process equipments that has the configured specification-names.
+            if (!_specifications.ContainsKey(bulkEquipment.Value.SpecificationId))
+                continue;
+
+            // We don't want to insert empty named equipment into Typesense.
             if (!string.IsNullOrEmpty(bulkEquipment.Value.Name))
             {
                 var equipment = new TypesenseEquipment(bulkEquipment.Value.Id, bulkEquipment.Value.Name);
                 batch.Add(equipment);
-            }
 
-            if (batch.Count == batchSize)
+                if (batch.Count == batchSize)
+                {
+                    _logger.LogInformation($"Bulk inserting {batch.Count}");
+                    await _typesense.ImportDocuments(_settings.UniqueCollectionName, batch, batchSize).ConfigureAwait(false);
+                    batch.Clear();
+                }
+            }
+            else
             {
-                _logger.LogInformation($"Bulk inserting {batch.Count}");
-                await _typesense.ImportDocuments(_settings.UniqueCollectionName, batch, batchSize).ConfigureAwait(false);
-                batch.Clear();
+                _logger.LogInformation($"Could not process equipment with id: {bulkEquipment.Key}");
             }
         }
 
@@ -73,11 +90,11 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
     {
         if (_bulkMode)
         {
-            await ProjectBulk(eventEnvelope);
+            await ProjectBulk(eventEnvelope).ConfigureAwait(false);
         }
         else
         {
-            await ProjectCatchUp(eventEnvelope);
+            await ProjectCatchUp(eventEnvelope).ConfigureAwait(false);
         }
     }
 
@@ -182,8 +199,11 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task Handle(TerminalEquipmentSpecificationAdded @event)
     {
-        _logger.LogInformation($"{nameof(TerminalEquipmentSpecificationAdded)} {@event.Specification.Name}");
-        _specifications.Add(@event.Specification.Id, @event.Specification.Name);
+        if (_settings.SpecificationNames.Contains(@event.Specification.Name))
+        {
+            _logger.LogInformation($"Adds {nameof(TerminalEquipmentSpecificationAdded)} {@event.Specification.Name}");
+            _specifications.Add(@event.Specification.Id, @event.Specification.Name);
+        }
         await Task.CompletedTask;
     }
 }
