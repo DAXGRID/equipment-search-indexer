@@ -71,7 +71,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             }
             else
             {
-                _logger.LogInformation($"Could not process equipment with id: {bulkEquipment.Key}");
+                _logger.LogDebug($"Could not process equipment with id: {bulkEquipment.Key}");
             }
         }
 
