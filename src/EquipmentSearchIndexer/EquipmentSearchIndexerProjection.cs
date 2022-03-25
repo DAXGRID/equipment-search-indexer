@@ -177,21 +177,23 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentPlacedInNodeContainer @event)
     {
-        var equipment = new Equipment(
+        var newEquipment = new Equipment(
             @event.Equipment.Id,
             @event.Equipment.Name,
             @event.Equipment.SpecificationId);
 
-        if (!string.IsNullOrWhiteSpace(equipment.Name) &&
-            _specifications.ContainsKey(equipment.SpecificationId))
+        var isNewEquipmentSpecificationIndexable = _specifications.ContainsKey(newEquipment.SpecificationId);
+
+        if (!string.IsNullOrWhiteSpace(newEquipment.Name) &&
+            isNewEquipmentSpecificationIndexable)
         {
-            var typesenseEquipment = new TypesenseEquipment(equipment.Id, equipment.Name);
+            var typesenseEquipment = new TypesenseEquipment(newEquipment.Id, newEquipment.Name);
             await _typesense.UpsertDocument(_settings.UniqueCollectionName, typesenseEquipment)
                 .ConfigureAwait(false);
         }
 
         // We add the new equipment to equipments.
-        _equipments.Add(equipment.Id, equipment);
+        _equipments.Add(newEquipment.Id, newEquipment);
     }
 
     private async Task HandleCatchUp(TerminalEquipmentNamingInfoChanged @event)
