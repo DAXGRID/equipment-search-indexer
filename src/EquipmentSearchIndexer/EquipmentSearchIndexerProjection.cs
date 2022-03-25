@@ -43,43 +43,42 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         // We do this because we want to avoid invalid configurations.
         // Because they can cause unexpected behaviours.
         if (_settings.SpecificationNames.Count != _specifications.Count)
-        {
             throw new ArgumentException("Could not find all specifications that is registered for insert.");
-        }
 
+        var insertedCounter = 0;
         var batchSize = 100;
         var batch = new List<TypesenseEquipment>();
-        foreach (var bulkEquipment in _equipments)
+        foreach (var equipment in _equipments)
         {
-            // We only want to process equipments that has the configured specification-names.
-            if (!_specifications.ContainsKey(bulkEquipment.Value.SpecificationId))
-                continue;
-
-            // We don't want to insert empty named equipment into Typesense.
-            if (!string.IsNullOrEmpty(bulkEquipment.Value.Name))
+            // We only want to process equipments that has the configured specification-names
+            // And name is not string or empty.
+            if (_specifications.ContainsKey(equipment.Value.SpecificationId) &&
+                !string.IsNullOrEmpty(equipment.Value.Name))
             {
-                var equipment = new TypesenseEquipment(bulkEquipment.Value.Id, bulkEquipment.Value.Name);
-                batch.Add(equipment);
+                var document = new TypesenseEquipment(equipment.Value.Id, equipment.Value.Name);
+                batch.Add(document);
+
+                _logger.LogInformation($"Inserting with name {document.Name}");
 
                 if (batch.Count == batchSize)
                 {
+                    insertedCounter += batchSize;
                     _logger.LogInformation($"Bulk inserting {batch.Count}");
                     await _typesense.ImportDocuments(_settings.UniqueCollectionName, batch, batchSize).ConfigureAwait(false);
                     batch.Clear();
                 }
-            }
-            else
-            {
-                _logger.LogDebug($"Could not process equipment with id: {bulkEquipment.Key}");
             }
         }
 
         // Import remaining batch.
         if (batch.Count > 0)
         {
+            insertedCounter += batch.Count;
             _logger.LogInformation($"Bulk inserting {batch.Count}");
             await _typesense.ImportDocuments(_settings.UniqueCollectionName, batch).ConfigureAwait(false);
         }
+
+        _logger.LogInformation($"Inserted a total of {insertedCounter} doing bulk.");
 
         _bulkMode = false;
     }
@@ -177,6 +176,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentPlacedInNodeContainer @event)
     {
+        _logger.LogInformation($"Processing {nameof(TerminalEquipmentPlacedInNodeContainer)}.");
         var newEquipment = new Equipment(
             @event.Equipment.Id,
             @event.Equipment.Name,
@@ -198,6 +198,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentNamingInfoChanged @event)
     {
+        _logger.LogInformation($"Processing {nameof(TerminalEquipmentNamingInfoChanged)}.");
         var equipment = _equipments[@event.TerminalEquipmentId];
         var updatedEquipment = equipment with { Name = @event.NamingInfo?.Name };
 
@@ -227,6 +228,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentSpecificationChanged @event)
     {
+        _logger.LogInformation($"Processing {nameof(TerminalEquipmentSpecificationChanged)}.");
         var oldEquipment = _equipments[@event.TerminalEquipmentId];
         var updatedEquipment = oldEquipment with { SpecificationId = @event.NewSpecificationId };
 

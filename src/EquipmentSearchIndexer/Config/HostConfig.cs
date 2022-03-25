@@ -9,7 +9,6 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Typesense.Setup;
 
 namespace EquipmentSearchIndexer.Config;
