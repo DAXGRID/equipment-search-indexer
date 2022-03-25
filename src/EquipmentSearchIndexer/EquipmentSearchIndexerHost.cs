@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using OpenFTTH.EventSourcing;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Typesense;
@@ -42,7 +41,7 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         try
         {
             _logger.LogInformation($"Creating Typesense collection '{collectionName}'.");
-            await CreateEquipmentCollection(collectionName);
+            await CreateEquipmentCollection(collectionName).ConfigureAwait(false);
 
             _logger.LogInformation("Start reading all events.");
             await _eventStore.DehydrateProjectionsAsync().ConfigureAwait(false);
