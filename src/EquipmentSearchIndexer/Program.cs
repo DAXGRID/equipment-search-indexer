@@ -1,3 +1,20 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using EquipmentSearchIndexer.Config;
+using Microsoft.Extensions.Hosting;
+using System.IO;
+using System.Threading.Tasks;
 
-Console.WriteLine("Hello, World!");
+namespace EquipmentSearchIndexer;
+
+public class Program
+{
+    static async Task Main(string[] args)
+    {
+        var root = Directory.GetCurrentDirectory();
+        var dotenv = Path.Combine(root, ".env");
+        DotEnv.Load(dotenv);
+
+        using var host = HostConfig.Configure();
+        await host.StartAsync();
+        await host.WaitForShutdownAsync();
+    }
+}
