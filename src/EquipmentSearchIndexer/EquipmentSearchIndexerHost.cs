@@ -51,7 +51,10 @@ internal class EquipmentSearchIndexerHost : BackgroundService
             await _typesenseClient.UpsertCollectionAlias(aliasName, new CollectionAlias(collectionName))
                 .ConfigureAwait(false);
 
-            _logger.LogInformation("Start listning for new events.");
+            _logger.LogInformation($"Marking service as healthy.");
+            MarkAsHealthy();
+
+            _logger.LogInformation("Start listening for new events.");
             await ListenEvents(stoppingToken).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -93,5 +96,10 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         };
 
         await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
+    }
+
+    private void MarkAsHealthy()
+    {
+        File.Create("/tmp/healthy");
     }
 }
