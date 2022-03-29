@@ -39,10 +39,10 @@ public static class HostConfig
             services.AddOptions();
             services.PostConfigure<Settings>(settings =>
             {
-                settings.SpecificationNames = JsonConvert.DeserializeObject<List<string>>(
-                    GetEnvironmentVariableNotNull("SPECIFICATION_NAMES")) ??
-                    throw new ArgumentException("Could not process specification names.");
-                settings.UniqueCollectionName = $"equipments-{Guid.NewGuid()}";
+                var s = GetSettings();
+                settings.CollectionAliasName = s.CollectionAliasName;
+                settings.SpecificationNames = s.SpecificationNames;
+                settings.UniqueCollectionName = s.UniqueCollectionName;
             });
             services.AddHostedService<EquipmentSearchIndexerHost>();
             services.AddTypesenseClient(c =>
@@ -89,6 +89,22 @@ public static class HostConfig
                 loggingBuilder.AddSerilog(logger, true);
             });
         });
+    }
+
+    private static Settings GetSettings()
+    {
+        var collectionAliasName = GetEnvironmentVariableNotNull("TYPESENSE_COLLECTION_ALIAS");
+        var specificationNames = JsonConvert.DeserializeObject<List<string>>(
+            GetEnvironmentVariableNotNull("SPECIFICATION_NAMES")) ??
+            throw new ArgumentNullException("SPECIFICATION_NAMES");
+        var uniqueCollectionName = $"{collectionAliasName}-{Guid.NewGuid()}";
+
+        return new Settings
+        {
+            CollectionAliasName = collectionAliasName,
+            SpecificationNames = specificationNames,
+            UniqueCollectionName = uniqueCollectionName
+        };
     }
 
     private static string GetEnvironmentVariableNotNull(string name)

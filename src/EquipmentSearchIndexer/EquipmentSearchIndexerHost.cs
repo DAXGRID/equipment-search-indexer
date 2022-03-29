@@ -6,6 +6,7 @@ using OpenFTTH.EventSourcing;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Typesense;
@@ -35,25 +36,31 @@ internal class EquipmentSearchIndexerHost : BackgroundService
     {
         _logger.LogInformation($"Starting {nameof(EquipmentSearchIndexerHost)}");
         var processableNames = String.Join(", ", _settings.SpecificationNames);
-        _logger.LogInformation($"Processing following specification names: '{processableNames}'");
+        _logger.LogInformation($"Processing with specification names: '{processableNames}'");
+        _logger.LogInformation($"Processing with collection alias: '{_settings.CollectionAliasName}'");
+        _logger.LogInformation($"Processing with unique collection name: '{_settings.UniqueCollectionName}'");
 
         var collectionName = _settings.UniqueCollectionName;
-        var aliasName = "equipments";
+        var alias = _settings.CollectionAliasName;
         try
         {
             _logger.LogInformation($"Creating Typesense collection '{collectionName}'.");
-            await CreateEquipmentCollection(collectionName).ConfigureAwait(false);
+            var schema = CreateSchema(collectionName);
+            await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
 
             _logger.LogInformation("Start reading all events.");
             await _eventStore.DehydrateProjectionsAsync().ConfigureAwait(false);
             _logger.LogInformation("Initial event processing finished.");
 
-            _logger.LogInformation($"Switching alias '{aliasName}' to '{collectionName}'");
-            await _typesenseClient.UpsertCollectionAlias(aliasName, new CollectionAlias(collectionName))
-                .ConfigureAwait(false);
+            _logger.LogInformation($"Switching alias '{alias}' to '{collectionName}'");
+            await _typesenseClient.UpsertCollectionAlias(
+                alias, new CollectionAlias(collectionName)).ConfigureAwait(false);
+
+            _logger.LogInformation($"Deleteing old collections.");
+            await DeleteOldCollections().ConfigureAwait(false);
 
             _logger.LogInformation($"Marking service as healthy.");
-            MarkAsHealthy();
+            File.Create("/tmp/healthy");
 
             _logger.LogInformation("Start listening for new events.");
             await ListenEvents(stoppingToken).ConfigureAwait(false);
@@ -66,8 +73,17 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         finally
         {
             _logger.LogInformation($"Shutting down.");
-            _logger.LogInformation($"Deleting collection '{collectionName}'.");
-            await _typesenseClient.DeleteCollection(collectionName).ConfigureAwait(false);
+        }
+    }
+
+    private async Task DeleteOldCollections()
+    {
+        var collections = await _typesenseClient.RetrieveCollections().ConfigureAwait(false);
+        var oldCollections = GetOldCollections(_settings.UniqueCollectionName, _settings.CollectionAliasName, collections);
+        foreach (var oldCollection in oldCollections)
+        {
+            _logger.LogInformation($"Deleteting old collection '{oldCollection}'");
+            await _typesenseClient.DeleteCollection(oldCollection).ConfigureAwait(false);
         }
     }
 
@@ -76,17 +92,14 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             await Task.Delay(1000, stoppingToken).ConfigureAwait(false);
-
             var eventsProcessed = await _eventStore.CatchUpAsync().ConfigureAwait(false);
-
             if (eventsProcessed > 0)
                 _logger.LogInformation($"Processed {eventsProcessed} new events.");
         }
     }
 
-    private async Task CreateEquipmentCollection(string collectionName)
-    {
-        var schema = new Schema(
+    private static Schema CreateSchema(string collectionName)
+        => new Schema(
             collectionName,
             new List<Field>
             {
@@ -94,11 +107,9 @@ internal class EquipmentSearchIndexerHost : BackgroundService
                 new Field("name", FieldType.String, false, false, true),
             });
 
-        await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
-    }
-
-    private void MarkAsHealthy()
-    {
-        File.Create("/tmp/healthy");
-    }
+    private static IEnumerable<string> GetOldCollections(
+        string newCollectionName, string collectionPrefix, List<CollectionResponse> collections)
+        => collections
+        .Where(x => x.Name.StartsWith(collectionPrefix) && x.Name != newCollectionName)
+        .Select(x => x.Name);
 }
