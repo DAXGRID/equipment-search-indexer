@@ -40,20 +40,21 @@ public static class HostConfig
             services.PostConfigure<Settings>(settings =>
             {
                 settings.SpecificationNames = JsonConvert.DeserializeObject<List<string>>(
-                    Environment.GetEnvironmentVariable("SPECIFICATION_NAMES") ?? "[]") ?? new();
+                    GetEnvironmentVariableNotNull("SPECIFICATION_NAMES")) ??
+                    throw new ArgumentException("Could not process specification names.");
                 settings.UniqueCollectionName = $"equipments-{Guid.NewGuid()}";
             });
             services.AddHostedService<EquipmentSearchIndexerHost>();
             services.AddTypesenseClient(c =>
             {
-                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE_APIKEY") ?? "";
+                c.ApiKey = GetEnvironmentVariableNotNull("TYPESENSE_APIKEY");
                 c.Nodes = new List<Node>
                 {
                     new Node
                     (
-                        Environment.GetEnvironmentVariable("TYPESENSE_HOST") ?? "",
-                        Environment.GetEnvironmentVariable("TYPESENSE_PORT") ?? "",
-                        Environment.GetEnvironmentVariable("TYPESENSE_PROTOCOL") ?? ""
+                        GetEnvironmentVariableNotNull("TYPESENSE_HOST"),
+                        GetEnvironmentVariableNotNull("TYPESENSE_PORT"),
+                        GetEnvironmentVariableNotNull("TYPESENSE_PROTOCOL")
                     )
                 };
             });
@@ -62,7 +63,7 @@ public static class HostConfig
                 e =>
                 new PostgresEventStore(
                     serviceProvider: e.GetRequiredService<IServiceProvider>(),
-                    connectionString: Environment.GetEnvironmentVariable("CONNECTIONSTRING"),
+                    connectionString: GetEnvironmentVariableNotNull("CONNECTIONSTRING"),
                     databaseSchemaName: "events"
                 ) as IEventStore);
         });
@@ -89,4 +90,7 @@ public static class HostConfig
             });
         });
     }
+
+    private static string GetEnvironmentVariableNotNull(string name)
+        => Environment.GetEnvironmentVariable(name) ?? throw new ArgumentNullException(name);
 }
