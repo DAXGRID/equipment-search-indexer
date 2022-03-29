@@ -68,6 +68,9 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex.Message, ex);
+            _logger.LogWarning(
+                "Deleting newly created collection because of error. To avoid a lot of zombie collections in case of outage.");
+            await _typesenseClient.DeleteCollection(collectionName).ConfigureAwait(false);
             throw;
         }
         finally
