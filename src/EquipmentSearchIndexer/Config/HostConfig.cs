@@ -46,15 +46,15 @@ public static class HostConfig
             services.AddHostedService<EquipmentSearchIndexerHost>();
             services.AddTypesenseClient(c =>
             {
-                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE_APIKEY");
+                c.ApiKey = Environment.GetEnvironmentVariable("TYPESENSE_APIKEY") ?? "";
                 c.Nodes = new List<Node>
                 {
                     new Node
-                    {
-                        Host = Environment.GetEnvironmentVariable("TYPESENSE_HOST"),
-                        Port = Environment.GetEnvironmentVariable("TYPESENSE_PORT"),
-                        Protocol = Environment.GetEnvironmentVariable("TYPESENSE_PROTOCOL"),
-                    }
+                    (
+                        Environment.GetEnvironmentVariable("TYPESENSE_HOST") ?? "",
+                        Environment.GetEnvironmentVariable("TYPESENSE_PORT") ?? "",
+                        Environment.GetEnvironmentVariable("TYPESENSE_PROTOCOL") ?? ""
+                    )
                 };
             });
             services.AddSingleton<IProjection, EquipmentSearchIndexerProjection>();

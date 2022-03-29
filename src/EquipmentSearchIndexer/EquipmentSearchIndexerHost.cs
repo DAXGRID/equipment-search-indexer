@@ -86,15 +86,13 @@ internal class EquipmentSearchIndexerHost : BackgroundService
 
     private async Task CreateEquipmentCollection(string collectionName)
     {
-        var schema = new Schema
-        {
-            Name = collectionName,
-            Fields = new List<Field>
+        var schema = new Schema(
+            collectionName,
+            new List<Field>
             {
                 new Field("id", FieldType.String, false, false, true),
                 new Field("name", FieldType.String, false, false, true),
-            },
-        };
+            });
 
         await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
     }

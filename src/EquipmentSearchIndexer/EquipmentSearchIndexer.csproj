@@ -23,7 +23,7 @@
     <PackageReference Include="OpenFTTH.RouteNetwork.Business" Version="2.1.0" />
     <PackageReference Include="OpenFTTH.EventSourcing" Version="2.1.2" />
     <PackageReference Include="OpenFTTH.UtilityGraphService.Business" Version="2.3.3" />
-    <PackageReference Include="Typesense" Version="3.4.0" />
+    <PackageReference Include="Typesense" Version="4.0.0" />
   </ItemGroup>
 
 </Project>
