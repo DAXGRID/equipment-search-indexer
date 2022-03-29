@@ -58,8 +58,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
                 var document = new TypesenseEquipment(equipment.Value.Id, equipment.Value.Name);
                 batch.Add(document);
 
-                _logger.LogInformation($"Inserting with name {document.Name}");
-
                 if (batch.Count == batchSize)
                 {
                     insertedCounter += batchSize;
