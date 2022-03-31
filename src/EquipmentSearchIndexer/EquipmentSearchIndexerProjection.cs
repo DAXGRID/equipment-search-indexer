@@ -174,7 +174,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentPlacedInNodeContainer @event)
     {
-        _logger.LogInformation($"Processing {nameof(TerminalEquipmentPlacedInNodeContainer)}.");
         var newEquipment = new Equipment(
             @event.Equipment.Id,
             @event.Equipment.Name,
@@ -196,7 +195,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentNamingInfoChanged @event)
     {
-        _logger.LogInformation($"Processing {nameof(TerminalEquipmentNamingInfoChanged)}.");
         var equipment = _equipments[@event.TerminalEquipmentId];
         var updatedEquipment = equipment with { Name = @event.NamingInfo?.Name };
 
@@ -226,7 +224,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentSpecificationChanged @event)
     {
-        _logger.LogInformation($"Processing {nameof(TerminalEquipmentSpecificationChanged)}.");
         var oldEquipment = _equipments[@event.TerminalEquipmentId];
         var updatedEquipment = oldEquipment with { SpecificationId = @event.NewSpecificationId };
 
