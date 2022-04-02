@@ -85,7 +85,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
     {
         if (_bulkMode)
         {
-            await ProjectBulk(eventEnvelope).ConfigureAwait(false);
+            ProjectBulk(eventEnvelope);
         }
         else
         {
@@ -93,21 +93,21 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
     }
 
-    private async Task ProjectBulk(IEventEnvelope eventEnvelope)
+    private void ProjectBulk(IEventEnvelope eventEnvelope)
     {
         switch (eventEnvelope.Data)
         {
             case (TerminalEquipmentPlacedInNodeContainer @event):
-                await HandleBulk(@event).ConfigureAwait(false);
+                HandleBulk(@event);
                 break;
             case (TerminalEquipmentNamingInfoChanged @event):
-                await HandleBulk(@event).ConfigureAwait(false);
+                HandleBulk(@event);
                 break;
             case (TerminalEquipmentSpecificationAdded @event):
-                await HandleBulk(@event).ConfigureAwait(false);
+                HandleBulk(@event);
                 break;
             case (TerminalEquipmentSpecificationChanged @event):
-                await HandleBulk(@event).ConfigureAwait(false);
+                HandleBulk(@event);
                 break;
             default:
                 throw new ArgumentException($"Could not handle typeof '{eventEnvelope.Data.GetType().Name}'");
@@ -132,7 +132,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
     }
 
-    private async Task HandleBulk(TerminalEquipmentPlacedInNodeContainer @event)
+    private void HandleBulk(TerminalEquipmentPlacedInNodeContainer @event)
     {
         if (!string.IsNullOrWhiteSpace(@event.Equipment.Name))
         {
@@ -142,34 +142,28 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
                 @event.Equipment.SpecificationId);
             _equipments.Add(@event.Equipment.Id, equipment);
         }
-        await Task.CompletedTask;
     }
 
-    private async Task HandleBulk(TerminalEquipmentNamingInfoChanged @event)
+    private void HandleBulk(TerminalEquipmentNamingInfoChanged @event)
     {
         var equipment = _equipments[@event.TerminalEquipmentId];
         equipment = equipment with { Name = @event.NamingInfo?.Name };
         _equipments[equipment.Id] = equipment;
-        await Task.CompletedTask;
     }
 
-    private async Task HandleBulk(TerminalEquipmentSpecificationChanged @event)
+    private void HandleBulk(TerminalEquipmentSpecificationChanged @event)
     {
         var equipment = _equipments[@event.TerminalEquipmentId];
         equipment = equipment with { SpecificationId = @event.NewSpecificationId };
         _equipments[equipment.Id] = equipment;
-        await Task.CompletedTask;
     }
 
-    private async Task HandleBulk(TerminalEquipmentSpecificationAdded @event)
+    private void HandleBulk(TerminalEquipmentSpecificationAdded @event)
     {
         if (_settings.SpecificationNames.Contains(@event.Specification.Name))
         {
-            _logger.LogInformation($"Adds {nameof(TerminalEquipmentSpecificationAdded)} {@event.Specification.Name}");
             _specifications.Add(@event.Specification.Id, @event.Specification.Name);
         }
-
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     private async Task HandleCatchUp(TerminalEquipmentPlacedInNodeContainer @event)
