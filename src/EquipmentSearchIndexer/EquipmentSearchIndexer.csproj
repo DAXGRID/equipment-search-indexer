@@ -21,8 +21,8 @@
     <PackageReference Include="Serilog.Formatting.Compact" Version="1.1.0" />
     <PackageReference Include="OpenFTTH.Events" Version="3.1.0" />
     <PackageReference Include="OpenFTTH.RouteNetwork.Business" Version="2.1.0" />
-    <PackageReference Include="OpenFTTH.EventSourcing" Version="2.2.8" />
-    <PackageReference Include="OpenFTTH.UtilityGraphService.Business" Version="2.6.0" />
+    <PackageReference Include="OpenFTTH.EventSourcing" Version="2.3.0" />
+    <PackageReference Include="OpenFTTH.UtilityGraphService.Business" Version="2.7.0" />
     <PackageReference Include="Typesense" Version="4.0.0" />
   </ItemGroup>
 
