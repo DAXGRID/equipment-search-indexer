@@ -134,14 +134,11 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private void HandleBulk(TerminalEquipmentPlacedInNodeContainer @event)
     {
-        if (!string.IsNullOrWhiteSpace(@event.Equipment.Name))
-        {
-            var equipment = new Equipment(
-                @event.Equipment.Id,
-                @event.Equipment.Name,
-                @event.Equipment.SpecificationId);
-            _equipments.Add(@event.Equipment.Id, equipment);
-        }
+        var equipment = new Equipment(
+            @event.Equipment.Id,
+            @event.Equipment.Name,
+            @event.Equipment.SpecificationId);
+        _equipments.Add(@event.Equipment.Id, equipment);
     }
 
     private void HandleBulk(TerminalEquipmentNamingInfoChanged @event)
