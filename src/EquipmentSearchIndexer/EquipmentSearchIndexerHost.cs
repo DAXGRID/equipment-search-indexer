@@ -102,8 +102,7 @@ internal class EquipmentSearchIndexerHost : BackgroundService
     }
 
     private static Schema CreateSchema(string collectionName)
-        => new Schema(
-            collectionName,
+        => new Schema(collectionName,
             new List<Field>
             {
                 new Field("id", FieldType.String, false, false, true),

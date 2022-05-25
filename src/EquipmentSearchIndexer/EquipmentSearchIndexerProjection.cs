@@ -34,6 +34,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         ProjectEventAsync<TerminalEquipmentNamingInfoChanged>(Project);
         ProjectEventAsync<TerminalEquipmentSpecificationAdded>(Project);
         ProjectEventAsync<TerminalEquipmentSpecificationChanged>(Project);
+        ProjectEventAsync<TerminalEquipmentRemoved>(Project);
     }
 
     public override async Task DehydrationFinishAsync()
@@ -109,6 +110,9 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             case (TerminalEquipmentSpecificationChanged @event):
                 HandleBulk(@event);
                 break;
+            case (TerminalEquipmentRemoved @event):
+                HandleBulk(@event);
+                break;
             default:
                 throw new ArgumentException($"Could not handle typeof '{eventEnvelope.Data.GetType().Name}'");
         }
@@ -127,6 +131,9 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             case (TerminalEquipmentSpecificationChanged @event):
                 await HandleCatchUp(@event).ConfigureAwait(false);
                 break;
+            case (TerminalEquipmentRemoved @event):
+                await HandleCatchUp(@event).ConfigureAwait(false);
+                break;
             default:
                 throw new ArgumentException($"Could not handle typeof '{eventEnvelope.Data.GetType().Name}'");
         }
@@ -138,6 +145,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             @event.Equipment.Id,
             @event.Equipment.Name,
             @event.Equipment.SpecificationId);
+
         _equipments.Add(@event.Equipment.Id, equipment);
     }
 
@@ -163,6 +171,11 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
     }
 
+    private void HandleBulk(TerminalEquipmentRemoved @event)
+    {
+        _equipments.Remove(@event.TerminalEquipmentId);
+    }
+
     private async Task HandleCatchUp(TerminalEquipmentPlacedInNodeContainer @event)
     {
         var newEquipment = new Equipment(
@@ -180,7 +193,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
                 .ConfigureAwait(false);
         }
 
-        // We add the new equipment to equipments.
         _equipments.Add(newEquipment.Id, newEquipment);
     }
 
@@ -209,7 +221,6 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             }
         }
 
-        // We update the equipment.
         _equipments[oldEquipment.Id] = updatedEquipment;
     }
 
@@ -241,7 +252,14 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             }
         }
 
-        // We update the equipment.
         _equipments[oldEquipment.Id] = updatedEquipment;
+    }
+
+    private async Task HandleCatchUp(TerminalEquipmentRemoved @event)
+    {
+        await _typesense.DeleteDocument<TypesenseEquipment>(
+            _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+
+        _equipments.Remove(@event.TerminalEquipmentId);
     }
 }
