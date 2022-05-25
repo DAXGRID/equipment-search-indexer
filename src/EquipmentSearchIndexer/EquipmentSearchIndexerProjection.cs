@@ -186,8 +186,8 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentNamingInfoChanged @event)
     {
-        var equipment = _equipments[@event.TerminalEquipmentId];
-        var updatedEquipment = equipment with { Name = @event.NamingInfo?.Name };
+        var oldEquipment = _equipments[@event.TerminalEquipmentId];
+        var updatedEquipment = oldEquipment with { Name = @event.NamingInfo?.Name };
 
         var isNewSpecificationIndexable = _specifications.ContainsKey(updatedEquipment.SpecificationId);
 
@@ -198,8 +198,8 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             if (!string.IsNullOrWhiteSpace(updatedEquipment.Name))
             {
                 var document = new TypesenseEquipment(updatedEquipment.Id, updatedEquipment.Name);
-                await _typesense.UpdateDocument(_settings.UniqueCollectionName, equipment.Id.ToString(), equipment)
-                   .ConfigureAwait(false);
+                await _typesense.UpdateDocument(
+                    _settings.UniqueCollectionName, oldEquipment.Id.ToString(), updatedEquipment).ConfigureAwait(false);
             }
             // If name has been set to null, empty or whitespace we remove it from Typesense.
             else
@@ -210,7 +210,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
 
         // We update the equipment.
-        _equipments[equipment.Id] = updatedEquipment;
+        _equipments[oldEquipment.Id] = updatedEquipment;
     }
 
     private async Task HandleCatchUp(TerminalEquipmentSpecificationChanged @event)
