@@ -49,7 +49,7 @@ internal class EquipmentSearchIndexerHost : BackgroundService
             await _typesenseClient.CreateCollection(schema).ConfigureAwait(false);
 
             _logger.LogInformation("Start reading all events.");
-            await _eventStore.DehydrateProjectionsAsync().ConfigureAwait(false);
+            await _eventStore.DehydrateProjectionsAsync(stoppingToken).ConfigureAwait(false);
             _logger.LogInformation("Initial event processing finished.");
 
             _logger.LogInformation($"Switching alias '{alias}' to '{collectionName}'");
@@ -95,7 +95,7 @@ internal class EquipmentSearchIndexerHost : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             await Task.Delay(1000, stoppingToken).ConfigureAwait(false);
-            var eventsProcessed = await _eventStore.CatchUpAsync().ConfigureAwait(false);
+            var eventsProcessed = await _eventStore.CatchUpAsync(stoppingToken).ConfigureAwait(false);
             if (eventsProcessed > 0)
                 _logger.LogInformation($"Processed {eventsProcessed} new events.");
         }
