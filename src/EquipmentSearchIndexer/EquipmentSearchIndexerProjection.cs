@@ -229,7 +229,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         var oldEquipment = _equipments[@event.TerminalEquipmentId];
         var updatedEquipment = oldEquipment with { SpecificationId = @event.NewSpecificationId };
 
-        var isOldSpecificationIndeable = _specifications.ContainsKey(oldEquipment.SpecificationId);
+        var isOldSpecificationIndexable = _specifications.ContainsKey(oldEquipment.SpecificationId);
         var isNewSpecificationIndexable = _specifications.ContainsKey(updatedEquipment.SpecificationId);
 
         if (isOldSpecificationIndexable)
@@ -262,7 +262,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             await _typesense.DeleteDocument<TypesenseEquipment>(
                 _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
         }
-        catch (TypesenseApiNotFoundException exception)
+        catch (TypesenseApiNotFoundException)
         {
             // It is okay, it could be removed in another case, because the name was removed.
         }
