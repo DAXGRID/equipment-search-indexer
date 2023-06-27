@@ -232,7 +232,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         var isOldSpecificationIndeable = _specifications.ContainsKey(oldEquipment.SpecificationId);
         var isNewSpecificationIndexable = _specifications.ContainsKey(updatedEquipment.SpecificationId);
 
-        if (isOldSpecificationIndeable)
+        if (isOldSpecificationIndexable)
         {
             // If the new is not indexable we remove the indexed document. Otherwise we do nothing.
             if (!isNewSpecificationIndexable)
@@ -257,8 +257,15 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
 
     private async Task HandleCatchUp(TerminalEquipmentRemoved @event)
     {
-        await _typesense.DeleteDocument<TypesenseEquipment>(
-            _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+        try
+        {
+            await _typesense.DeleteDocument<TypesenseEquipment>(
+                _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+        }
+        catch (TypesenseApiNotFoundException exception)
+        {
+            // It is okay, it could be removed in another case, because the name was removed.
+        }
 
         _equipments.Remove(@event.TerminalEquipmentId);
     }
