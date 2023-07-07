@@ -210,14 +210,21 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             if (!string.IsNullOrWhiteSpace(updatedEquipment.Name))
             {
                 var document = new TypesenseEquipment(updatedEquipment.Id, updatedEquipment.Name);
-                await _typesense.UpdateDocument(
-                    _settings.UniqueCollectionName, oldEquipment.Id.ToString(), updatedEquipment).ConfigureAwait(false);
+                await _typesense.UpsertDocument(
+                    _settings.UniqueCollectionName, updatedEquipment).ConfigureAwait(false);
             }
             // If name has been set to null, empty or whitespace we remove it from Typesense.
             else
             {
-                await _typesense.DeleteDocument<TypesenseEquipment>(
-                    _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+                try
+                {
+                    await _typesense.DeleteDocument<TypesenseEquipment>(
+                        _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+                }
+                catch (TypesenseApiNotFoundException)
+                {
+                    // It is okay, it could be removed in another case, because the name was removed.
+                }
             }
         }
 
@@ -237,8 +244,15 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             // If the new is not indexable we remove the indexed document. Otherwise we do nothing.
             if (!isNewSpecificationIndexable)
             {
-                await _typesense.DeleteDocument<TypesenseEquipment>(
-                    _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+                try
+                {
+                    await _typesense.DeleteDocument<TypesenseEquipment>(
+                        _settings.UniqueCollectionName, @event.TerminalEquipmentId.ToString()).ConfigureAwait(false);
+                }
+                catch (TypesenseApiNotFoundException)
+                {
+                    // It is okay, it could be removed in another case, because the name was removed.
+                }
             }
         }
         else
@@ -247,7 +261,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             if (isNewSpecificationIndexable && !string.IsNullOrWhiteSpace(updatedEquipment.Name))
             {
                 var document = new TypesenseEquipment(updatedEquipment.Id, updatedEquipment.Name);
-                await _typesense.UpdateDocument(_settings.UniqueCollectionName, oldEquipment.Id.ToString(), oldEquipment)
+                await _typesense.UpsertDocument(_settings.UniqueCollectionName, oldEquipment)
                     .ConfigureAwait(false);
             }
         }
