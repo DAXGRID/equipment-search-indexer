@@ -73,7 +73,7 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         if (batch.Count > 0)
         {
             insertedCounter += batch.Count;
-            _logger.LogInformation($"Bulk inserting {batch.Count}");
+            _logger.LogDebug($"Bulk inserting {batch.Count}");
             await _typesense.ImportDocuments(_settings.UniqueCollectionName, batch).ConfigureAwait(false);
         }
 
