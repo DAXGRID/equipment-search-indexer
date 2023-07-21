@@ -128,6 +128,9 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
             case (TerminalEquipmentNamingInfoChanged @event):
                 await HandleCatchUp(@event).ConfigureAwait(false);
                 break;
+            case (TerminalEquipmentSpecificationAdded @event):
+                await HandleCatchUp(@event).ConfigureAwait(false);
+                break;
             case (TerminalEquipmentSpecificationChanged @event):
                 await HandleCatchUp(@event).ConfigureAwait(false);
                 break;
@@ -229,6 +232,16 @@ internal class EquipmentSearchIndexerProjection : ProjectionBase
         }
 
         _equipments[oldEquipment.Id] = updatedEquipment;
+    }
+
+    private Task HandleCatchUp(TerminalEquipmentSpecificationAdded @event)
+    {
+        if (_settings.SpecificationNames.Contains(@event.Specification.Name))
+        {
+            _specifications.Add(@event.Specification.Id, @event.Specification.Name);
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task HandleCatchUp(TerminalEquipmentSpecificationChanged @event)
