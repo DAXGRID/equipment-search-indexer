@@ -35,6 +35,9 @@ internal class EquipmentSearchIndexerHost : BackgroundService
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"Starting {nameof(EquipmentSearchIndexerHost)}");
+
+        _eventStore.ScanForProjections();
+
         var processableNames = String.Join(", ", _settings.SpecificationNames);
         _logger.LogInformation($"Processing with specification names: '{processableNames}'");
         _logger.LogInformation($"Processing with collection alias: '{_settings.CollectionAliasName}'");
