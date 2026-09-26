@@ -9,7 +9,7 @@ executors:
         password: $DOCKER_ACCESSTOKEN
   docker-publisher:
     environment:
-      IMAGE_NAME: openftth/equipment-search-indexer
+      IMAGE_NAME: daxgrid/equipment-search-indexer
     docker:
       - image: cimg/base:current
         auth:
