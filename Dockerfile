@@ -17,5 +17,6 @@ WORKDIR /app
 
 RUN apk add --no-cache icu-libs krb5-libs
 
-COPY --from=build-env /app/src/EquipmentSearchIndexer/out .
+COPY --from=build-env --chown=app:app /app/src/EquipmentSearchIndexer/out .
+USER app
 ENTRYPOINT ["dotnet", "EquipmentSearchIndexer.dll"]
